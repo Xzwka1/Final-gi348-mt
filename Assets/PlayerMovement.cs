@@ -1,79 +1,120 @@
+using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
+using TMPro;
 
-[RequireComponent(typeof(CharacterController))]
-public class PlayerMovement : MonoBehaviour
+public class PlayerMovementTutorial : MonoBehaviour
 {
-    [Header("Movement Settings")]
-    public float speed = 5f;          // ความเร็วตอนเดิน
-    public float jumpHeight = 1.5f;   // ความสูงตอนกระโดด
-    public float gravity = -15f;      // แรงโน้มถ่วง
-    public float mouseSensitivity = 200f; // ความไวเมาส์
+    [Header("Movement")]
+    public float moveSpeed;
 
-    [Header("References (ห้ามลืมใส่!)")]
-    public Transform playerCamera;    // *** ต้องลาก Main Camera มาใส่ช่องนี้ ***
+    public float groundDrag;
 
-    private CharacterController controller;
-    private Vector3 velocity;
-    private bool isGrounded;
-    private float xRotation = 0f;
+    public float jumpForce;
+    public float jumpCooldown;
+    public float airMultiplier;
+    bool readyToJump;
 
-    void Start()
+    [HideInInspector] public float walkSpeed;
+    [HideInInspector] public float sprintSpeed;
+
+    [Header("Keybinds")]
+    public KeyCode jumpKey = KeyCode.Space;
+
+    [Header("Ground Check")]
+    public float playerHeight;
+    public LayerMask whatIsGround;
+    bool grounded;
+
+    public Transform orientation;
+
+    float horizontalInput;
+    float verticalInput;
+
+    Vector3 moveDirection;
+
+    Rigidbody rb;
+
+    private void Start()
     {
-        controller = GetComponent<CharacterController>();
+        rb = GetComponent<Rigidbody>();
+        rb.freezeRotation = true;
 
-        // เช็คว่าลืมใส่กล้องไหม ถ้าลืมให้แจ้งเตือนสีแดง
-        if (playerCamera == null)
-        {
-            Debug.LogError("คุณยังไม่ได้ลาก Main Camera มาใส่ในช่อง Player Camera ที่สคริปต์ครับ!");
-        }
-
-        // ล็อคเมาส์ซ่อนไว้กลางจอเวลาเล่น
-        Cursor.lockState = CursorLockMode.Locked;
+        readyToJump = true;
     }
 
-    void Update()
+    private void Update()
     {
-        // 1. เช็คว่าตัวละครเหยียบพื้นอยู่ไหม
-        isGrounded = controller.isGrounded;
-        if (isGrounded && velocity.y < 0)
+        // ground check
+        grounded = Physics.Raycast(transform.position, Vector3.down, playerHeight * 0.5f + 0.3f, whatIsGround);
+
+        MyInput();
+        SpeedControl();
+
+        // handle drag
+        if (grounded)
+            rb.linearDamping = groundDrag;
+        else
+            rb.linearDamping = 0;
+    }
+
+    private void FixedUpdate()
+    {
+        MovePlayer();
+    }
+
+    private void MyInput()
+    {
+        horizontalInput = Input.GetAxisRaw("Horizontal");
+        verticalInput = Input.GetAxisRaw("Vertical");
+
+        // when to jump
+        if (Input.GetKey(jumpKey) && readyToJump && grounded)
         {
-            velocity.y = -2f;
+            readyToJump = false;
+
+            Jump();
+
+            Invoke(nameof(ResetJump), jumpCooldown);
         }
+    }
 
-        // 2. หมุนกล้องขึ้นลงและหันซ้ายขวา
-        float mouseX = Input.GetAxis("Mouse X") * mouseSensitivity * Time.deltaTime;
-        float mouseY = Input.GetAxis("Mouse Y") * mouseSensitivity * Time.deltaTime;
+    private void MovePlayer()
+    {
+        // calculate movement direction
+        moveDirection = orientation.forward * verticalInput + orientation.right * horizontalInput;
 
-        // หันขึ้นลง (แกน X ของกล้อง)
-        xRotation -= mouseY;
+        // on ground
+        if (grounded)
+            rb.AddForce(moveDirection.normalized * moveSpeed * 10f, ForceMode.Force);
 
-        // หมายเหตุ: ตรงนี้คือการล็อคคอไม่ให้เงยหรือก้มเกิน 90 องศา (ไม่ให้ตีลังกา)
-        // ถ้าอยากให้อิสระแบบหมุนคอได้ 360 องศา ให้ลบหรือใส่ // หน้าบรรทัด Mathf.Clamp นี้ครับ
-        xRotation = Mathf.Clamp(xRotation, -90f, 90f);
+        // in air
+        else if (!grounded)
+            rb.AddForce(moveDirection.normalized * moveSpeed * 10f * airMultiplier, ForceMode.Force);
+    }
 
-        if (playerCamera != null)
+    private void SpeedControl()
+    {
+        // เปลี่ยนจาก rb.velocity เป็น rb.linearVelocity
+        Vector3 flatVel = new Vector3(rb.linearVelocity.x, 0f, rb.linearVelocity.z);
+
+        // limit velocity if needed
+        if (flatVel.magnitude > moveSpeed)
         {
-            playerCamera.localRotation = Quaternion.Euler(xRotation, 0f, 0f);
+            Vector3 limitedVel = flatVel.normalized * moveSpeed;
+            rb.linearVelocity = new Vector3(limitedVel.x, rb.linearVelocity.y, limitedVel.z);
         }
+    }
 
-        // หันซ้ายขวา (แกน Y ของตัวละคร)
-        transform.Rotate(Vector3.up * mouseX);
+    private void Jump()
+    {
+        // เปลี่ยนจาก rb.velocity เป็น rb.linearVelocity
+        rb.linearVelocity = new Vector3(rb.linearVelocity.x, 0f, rb.linearVelocity.z);
 
-        // 3. ระบบเดิน (WASD)
-        float x = Input.GetAxis("Horizontal");
-        float z = Input.GetAxis("Vertical");
-
-        Vector3 move = transform.right * x + transform.forward * z;
-        controller.Move(move * speed * Time.deltaTime);
-
-        // 4. ระบบกระโดด (Spacebar)
-        if (Input.GetButtonDown("Jump") && isGrounded)
-        {
-            velocity.y = Mathf.Sqrt(jumpHeight * -2f * gravity);
-        }
-
-        // 5. คำนวณแรงโน้มถ่วงให้ตกลงมา
-        velocity.y += gravity * Time.deltaTime;
-        controller.Move(velocity * Time.deltaTime);
+        rb.AddForce(transform.up * jumpForce, ForceMode.Impulse);
+    }
+    private void ResetJump()
+    {
+        readyToJump = true;
     }
 }
