@@ -7173,6 +7173,7 @@ GameObject:
   - component: {fileID: 1241919398}
   - component: {fileID: 1241919397}
   - component: {fileID: 1241919402}
+  - component: {fileID: 1241919403}
   m_Layer: 0
   m_Name: Player
   m_TagString: Untagged
@@ -7212,6 +7213,7 @@ MonoBehaviour:
   walkSpeed: 7
   sprintSpeed: 10
   crouchSpeed: 3
+  swingSpeed: 15
   groundDrag: 5
   jumpForce: 8
   jumpCooldown: 0.25
@@ -7227,6 +7229,7 @@ MonoBehaviour:
   maxSlopeAngle: 45
   freeze: 0
   activeGrapple: 0
+  swinging: 0
   orientation: {fileID: 274050979}
   state: 0
 --- !u!54 &1241919398
@@ -7359,6 +7362,27 @@ MonoBehaviour:
   overshootYAxis: 2
   grapplingCd: 0
   grappleKey: 324
+--- !u!114 &1241919403
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1241919395}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0f7f4e04950da2043914c3b6304cb9bc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Swinging
+  lr: {fileID: 2063934481}
+  gunTip: {fileID: 1890499797}
+  cam: {fileID: 1385362650}
+  player: {fileID: 1241919396}
+  whatIsGrappleable:
+    serializedVersion: 2
+    m_Bits: 64
+  maxSwingDistance: 25
+  swingKey: 323
 --- !u!1 &1300828644
 GameObject:
   m_ObjectHideFlags: 0

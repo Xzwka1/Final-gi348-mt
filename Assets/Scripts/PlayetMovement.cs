@@ -8,6 +8,7 @@ public class PlayerMovement : MonoBehaviour
     public float walkSpeed = 7f;
     public float sprintSpeed = 10f;
     public float crouchSpeed = 3f;
+    public float swingSpeed = 15f; // ความเร็วตอนโหนเชือก
     public float groundDrag = 5f;
     private float moveSpeed;
 
@@ -36,9 +37,10 @@ public class PlayerMovement : MonoBehaviour
     private RaycastHit slopeHit;
     private bool exitingSlope;
 
-    [Header("Grappling (ระบบสลิง)")]
+    [Header("State Bools (สถานะพิเศษ)")]
     public bool freeze;
     public bool activeGrapple;
+    public bool swinging; // เช็คว่ากำลังโหนเชือกอยู่ไหม
     private bool enableMovementOnNextTouch;
 
     [Header("References")]
@@ -50,7 +52,7 @@ public class PlayerMovement : MonoBehaviour
     Rigidbody rb;
 
     public MovementState state;
-    public enum MovementState { freeze, grappling, walking, sprinting, crouching, air }
+    public enum MovementState { freeze, grappling, swinging, walking, sprinting, crouching, air }
 
     private void Start()
     {
@@ -120,6 +122,11 @@ public class PlayerMovement : MonoBehaviour
         else if (activeGrapple)
         {
             state = MovementState.grappling;
+        }
+        else if (swinging)
+        {
+            state = MovementState.swinging;
+            moveSpeed = swingSpeed;
         }
         else if (Input.GetKey(crouchKey))
         {
@@ -217,7 +224,7 @@ public class PlayerMovement : MonoBehaviour
         activeGrapple = true;
         velocityToSet = CalculateJumpVelocity(transform.position, targetPosition, trajectoryHeight);
         Invoke(nameof(SetVelocity), 0.1f);
-        Invoke(nameof(ResetRestrictions), 3f); // กันบั๊กค้างถ้าลอยนานเกิน 3 วิ
+        Invoke(nameof(ResetRestrictions), 3f);
     }
 
     private void SetVelocity()
